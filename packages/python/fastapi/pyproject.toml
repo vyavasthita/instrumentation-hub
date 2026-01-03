@@ -1,0 +1,26 @@
+[project]
+name = "instrumentation-hub-fastapi"
+version = "0.1.0"
+description = "FastAPI instrumentation helpers from Instrumentation Hub"
+authors = [
+    {name = "Dilip Sharma",email = "diliplakshya@gmail.com"}
+]
+readme = "README.md"
+requires-python = "~=3.14"
+dependencies = [
+    "opentelemetry-api (>=1.39.1,<2.0.0)",
+    "opentelemetry-sdk (>=1.39.1,<2.0.0)",
+    "opentelemetry-exporter-otlp (>=1.39.1,<2.0.0)",
+    "opentelemetry-exporter-otlp-proto-http (>=1.39.1,<2.0.0)",
+    "opentelemetry-instrumentation (>=0.60b1,<0.61)",
+    "opentelemetry-instrumentation-fastapi (>=0.60b1,<0.61)",
+    "opentelemetry-instrumentation-asgi (>=0.60b1,<0.61)",
+    "opentelemetry-exporter-prometheus (>=0.60b1,<0.61)",
+    "prometheus-client (>=0.23.1,<0.24.0)",
+    "pydantic-settings (>=2.12.0,<3.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
