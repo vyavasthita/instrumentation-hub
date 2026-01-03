@@ -14,14 +14,25 @@ from ....config import ConfigModel
 
 
 class OpenTelemetryTracingSetup:
-    """Configure tracing for FastAPI using OTLP exporters."""
+    """Configure tracing for FastAPI using OTLP exporters.
+
+    Example:
+        ```python
+        tracing = OpenTelemetryTracingSetup(app, config)
+        tracing.setup_tracing()
+        tracing.instrument_fastapi()
+        ```
+    """
 
     def __init__(self, app, config: ConfigModel):
+        """Persist FastAPI app + config references for instrumentation hooks."""
+
         self.app = app
         self.config = config
         self.tracer_provider: Optional[TracerProvider] = None
 
     def setup_tracing(self) -> TracerProvider:
+        """Create the tracer provider, span processor, and exporter bindings."""
         endpoint = self.config.OTEL_EXPORTER_TRACES_ENDPOINT
         exporter = OTLPSpanExporter(endpoint=endpoint) if endpoint else None
         if exporter is None:
@@ -35,6 +46,8 @@ class OpenTelemetryTracingSetup:
         return provider
 
     def instrument_fastapi(self) -> None:
+        """Register FastAPI instrumentation once setup is complete."""
+
         if not self.tracer_provider:
             raise RuntimeError("Tracing not initialized. Call setup_tracing() first.")
         FastAPIInstrumentor.instrument_app(self.app, tracer_provider=self.tracer_provider)

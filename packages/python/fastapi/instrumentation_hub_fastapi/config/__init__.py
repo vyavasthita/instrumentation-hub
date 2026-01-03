@@ -9,7 +9,14 @@ from pydantic_settings import BaseSettings
 
 
 class ConfigModel(BaseSettings):
-    """Typed configuration mirroring tic-tac-toe's pattern (uppercase fields)."""
+    """Typed configuration mirroring tic-tac-toe's pattern (uppercase fields).
+
+    Example:
+        ```python
+        config = ConfigModel(OTEL_SERVICE_NAME="orders-api")
+        print(config.OTEL_SERVICE_NAME)
+        ```
+    """
 
     OTEL_SERVICE_NAME: str = Field(
         default="instrumentation-hub-fastapi",
@@ -42,12 +49,19 @@ class ConfigModel(BaseSettings):
 
     @cached_property
     def resource(self) -> Resource:
+        # Every signal shares the same OpenTelemetry resource metadata for consistent labeling.
         return Resource.create({SERVICE_NAME: self.OTEL_SERVICE_NAME})
 
 
 @lru_cache
 def Config() -> ConfigModel:
-    """Return a cached configuration instance so repeated calls are cheap."""
+    """Return a cached configuration instance so repeated calls are cheap.
+
+    Example:
+        ```python
+        config = Config()
+        ```
+    """
 
     return ConfigModel()
 

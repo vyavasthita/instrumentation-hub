@@ -9,7 +9,16 @@ F = TypeVar("F", bound=Callable)
 
 
 def rate_limited_log(interval_seconds: int = 60) -> Callable[[F], F]:
-    """Decorator that flips `wrapper._can_log` when the interval has elapsed."""
+    """Decorator that flips `wrapper._can_log` when the interval has elapsed.
+
+    Example:
+        ```python
+        @rate_limited_log(interval_seconds=5)
+        async def handler():
+            if handler._can_log:
+                logger.info("expensive log")
+        ```
+    """
 
     def decorator(func: F) -> F:
         last_logged = [0.0]

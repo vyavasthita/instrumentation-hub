@@ -14,14 +14,24 @@ from ....config import ConfigModel
 
 
 class OpenTelemetryMetricsSetup:
-    """Configure OTLP + Prometheus metrics for FastAPI."""
+    """Configure OTLP + Prometheus metrics for FastAPI.
+
+    Example:
+        ```python
+        metrics = OpenTelemetryMetricsSetup(app, config)
+        metrics.setup()
+        ```
+    """
 
     def __init__(self, app, config: ConfigModel):
+        """Capture FastAPI + configuration references for later setup calls."""
+
         self.app = app
         self.config = config
         self._meter_provider: Optional[MeterProvider] = None
 
     def setup(self) -> MeterProvider:
+        """Create exporters, mount the Prometheus endpoint, and instrument FastAPI."""
         endpoint = self.config.OTEL_EXPORTER_METRICS_ENDPOINT
         exporter = OTLPMetricExporter(endpoint=endpoint) if endpoint else None
         if exporter is None:
@@ -41,6 +51,8 @@ class OpenTelemetryMetricsSetup:
         return provider
 
     def get_meter(self):
+        """Return the lazily created meter for user-defined instruments."""
+
         if not self._meter_provider:
             raise RuntimeError("MeterProvider not initialized. Call setup() first.")
         return self._meter_provider.get_meter(self.config.OTEL_SERVICE_NAME)

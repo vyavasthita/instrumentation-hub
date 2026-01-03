@@ -1,0 +1,29 @@
+# macOS / editor cruft
+.DS_Store
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.env
+.env.*
+.mypy_cache/
+.pytest_cache/
+htmlcov/
+coverage.xml
+
+# Node / TypeScript
+node_modules/
+dist/
+.next/
+
+# Logs & temp files
+*.log
+*.tmp
+*.swp
+
+# Build artifacts
+*.egg

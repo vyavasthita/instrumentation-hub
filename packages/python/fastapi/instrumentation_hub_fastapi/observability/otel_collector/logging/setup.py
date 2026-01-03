@@ -17,18 +17,31 @@ from .processor import OTLPLogProcessor
 
 @dataclass
 class LoggingComponents:
+    """Bundle of logging objects returned to callers."""
+
     provider: LoggerProvider
     processor: BatchLogRecordProcessor
 
 
 class OpenTelemetryLoggingSetup:
-    """Wire OTLP logging into the current process."""
+    """Wire OTLP logging into the current process.
+
+    Example:
+        ```python
+        setup = OpenTelemetryLoggingSetup(config)
+        components = setup.setup_logging()
+        ```
+    """
 
     def __init__(self, config: ConfigModel):
+        """Store config for later use when building exporters/providers."""
+
         self.config = config
         self.components: Optional[LoggingComponents] = None
 
     def setup_logging(self) -> LoggingComponents:
+        """Configure exporters, attach handlers, and register shutdown hooks."""
+
         if not self.config.OTEL_EXPORTER_LOGS_ENDPOINT:
             raise ValueError("OTEL_EXPORTER_LOGS_ENDPOINT must be provided to enable logging exports")
 
@@ -51,6 +64,8 @@ class OpenTelemetryLoggingSetup:
         return self.components
 
     def shutdown(self) -> None:
+        """Flush buffered log records before interpreter exit."""
+
         if not self.components:
             return
         try:

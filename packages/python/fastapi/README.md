@@ -8,12 +8,12 @@ so a service only needs a few lines of code to emit full telemetry to OAAS or an
 
 ## Installation
 
-Until packages are published to an internal registry you can reference the Git repo directly:
+Until packages are published to an internal registry you can reference the public GitHub repo directly:
 
 ```bash
-poetry add git+https://github.com/<org>/instrumentation-hub.git#subdirectory=packages/python/fastapi
+poetry add git+https://github.com/vyavasthita/instrumentation-hub.git#subdirectory=packages/python/fastapi
 # or with pip
-pip install "instrumentation-hub-fastapi @ git+https://github.com/<org>/instrumentation-hub.git@main#subdirectory=packages/python/fastapi"
+pip install "instrumentation-hub-fastapi @ git+https://github.com/vyavasthita/instrumentation-hub.git@main#subdirectory=packages/python/fastapi"
 ```
 
 When published to PyPI/Artifactory the installation becomes:

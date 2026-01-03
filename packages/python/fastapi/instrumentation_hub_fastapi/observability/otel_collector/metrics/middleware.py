@@ -8,7 +8,13 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 
 class MetricsMiddleware(BaseHTTPMiddleware):
-    """Collect request counts and durations for every HTTP request."""
+    """Collect request counts and durations for every HTTP request.
+
+    Example:
+        ```python
+        app.add_middleware(MetricsMiddleware, meter=meter)
+        ```
+    """
 
     def __init__(self, app, meter: Meter):
         super().__init__(app)
@@ -16,6 +22,8 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         self._init_instruments()
 
     def _init_instruments(self) -> None:
+        """Create counter + histogram instruments once per middleware instance."""
+
         self.request_counter = self.meter.create_counter(
             name="http_server_requests_total",
             description="Total HTTP requests",
@@ -28,6 +36,8 @@ class MetricsMiddleware(BaseHTTPMiddleware):
         )
 
     async def dispatch(self, request, call_next):
+        """Record per-request counters and histograms before returning the response."""
+
         start = time.time()
         response = await call_next(request)
         duration = time.time() - start

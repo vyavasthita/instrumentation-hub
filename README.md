@@ -52,7 +52,7 @@ You have a few installation options, depending on how formal you need versioning
    - Gives you semantic versioning, changelogs, and easy rollbacks.
 
 2. **Direct Git Dependency (fastest to bootstrap)**
-   - Point Poetry or pip at the repo/tag: `poetry add git+https://github.com/<org>/instrumentation-hub.git#subdirectory=packages/python/fastapi`.
+   - Point Poetry or pip at the repo/tag: `poetry add git+https://github.com/vyavasthita/instrumentation-hub.git#subdirectory=packages/python/fastapi`.
    - No registry setup, but installs are slower and you need to manage tags carefully.
 
 3. **Git Submodule / Monorepo Include**
@@ -75,3 +75,21 @@ We'll start with option 2 (Git dependency) during development, then move to opti
 - Set up CI (lint, type-check, unit tests, publish-on-tag).
 
 Once the FastAPI adapter is stable, the Django and Express packages can mirror the same pattern.
+
+---
+
+## FastAPI Quick Start
+
+```bash
+poetry add git+https://github.com/vyavasthita/instrumentation-hub.git#subdirectory=packages/python/fastapi
+```
+
+```python
+from fastapi import FastAPI
+from instrumentation_hub_fastapi import setup_fastapi_instrumentation
+
+app = FastAPI()
+setup_fastapi_instrumentation(app)
+```
+
+Set the standard `OTEL_EXPORTER_*` env vars in your compose/service definition and the helper will emit logs, metrics, and traces directly to OAAS.
