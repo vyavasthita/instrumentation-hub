@@ -1,6 +1,6 @@
 """Public exports for the Instrumentation Hub FastAPI adapter."""
 
-from .bootstrap import FastAPIInstrumentation, InstrumentationResult, setup_fastapi_instrumentation
+from .bootstrap import FastAPIInstrumentation, InstrumentationResult
 from .enums.log_level import LogLevel
 from .config import Config, ConfigModel
 from .observability.otel_collector.metrics.middleware import MetricsMiddleware
@@ -14,6 +14,5 @@ __all__ = [
 	"ConfigModel",
 	"MetricsMiddleware",
 	"rate_limited_log",
-	"setup_fastapi_instrumentation",
 	"LogLevel",
 ]
