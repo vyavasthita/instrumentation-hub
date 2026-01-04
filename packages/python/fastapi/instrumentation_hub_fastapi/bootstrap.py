@@ -1,17 +1,15 @@
 
 """Entrypoints for wiring Instrumentation Hub into FastAPI."""
-from __future__ import annotations
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import FastAPI
 
-from .config import ConfigModel
-from .observability.otel_collector.logging.setup import OpenTelemetryLoggingSetup
-from .observability.otel_collector.metrics.middleware import MetricsMiddleware
-from .observability.otel_collector.metrics.setup import OpenTelemetryMetricsSetup
-from .observability.otel_collector.tracing.setup import OpenTelemetryTracingSetup
-from .enums.log_level import LogLevel
+from instrumentation_hub_fastapi.observability.otel_collector.logging.setup import OpenTelemetryLoggingSetup
+from instrumentation_hub_fastapi.observability.otel_collector.metrics.middleware import MetricsMiddleware
+from instrumentation_hub_fastapi.observability.otel_collector.metrics.setup import OpenTelemetryMetricsSetup
+from instrumentation_hub_fastapi.observability.otel_collector.tracing.setup import OpenTelemetryTracingSetup
+from instrumentation_hub_fastapi.enums.log_level import LogLevel
 
 
 @dataclass
@@ -49,50 +47,25 @@ class FastAPIInstrumentation:
         instrumentation.setup(app)
         ```
     """
-
-    def __init__(
-        self,
-        service_name: Optional[str] = None,
-        exporter_logs_endpoint: Optional[str] = None,
-        exporter_traces_endpoint: Optional[str] = None,
-        exporter_metrics_endpoint: Optional[str] = None,
-        metrics_mount_path: Optional[str] = None,
-        attach_python_logging: Optional[bool] = None,
-        log_level: Optional[str] = None,
-    ):
-        """
-        Accepts explicit configuration parameters for OpenTelemetry setup.
-        All fields correspond to ConfigModel fields, but use snake_case for Pythonic API.
-        log_level: Optional log level for Python logging (e.g., "INFO", "DEBUG").
-        """
-        self.config = ConfigModel(
-            OTEL_SERVICE_NAME=service_name,
-            OTEL_EXPORTER_LOGS_ENDPOINT=exporter_logs_endpoint,
-            OTEL_EXPORTER_TRACES_ENDPOINT=exporter_traces_endpoint,
-            OTEL_EXPORTER_METRICS_ENDPOINT=exporter_metrics_endpoint,
-            METRICS_MOUNT_PATH=metrics_mount_path,
-            ATTACH_PYTHON_LOGGING=attach_python_logging,
-            LOG_LEVEL=log_level,
-        )
-
     def setup(self, app: FastAPI) -> InstrumentationResult:
         """
         Attach logging, tracing, metrics, and middleware to the provided FastAPI app.
         Returns an InstrumentationResult with meter, logging, and tracing objects.
         """
         # Set up OpenTelemetry logging
-        logging_components = OpenTelemetryLoggingSetup(self.config).setup_logging()
+        logging_components = OpenTelemetryLoggingSetup().setup_logging()
 
         # Set up OpenTelemetry tracing
-        tracing = OpenTelemetryTracingSetup(app, self.config)
+        tracing = OpenTelemetryTracingSetup(app)
         tracer_provider = tracing.setup_tracing()
-        tracing.instrument_fastapi()
+        tracing.instrument_fastapi(tracer_provider=tracer_provider)
 
         # Set up OpenTelemetry metrics
-        metrics = OpenTelemetryMetricsSetup(app, self.config)
-        metrics.setup()
-        meter = metrics.get_meter()
-        
+        metrics = OpenTelemetryMetricsSetup(app)
+        meter_provider = metrics.setup()
+        metrics.instrument_fastapi(meter_provider)
+        meter = OpenTelemetryMetricsSetup.get_meter(meter_provider)
+
         # Add metrics middleware to FastAPI app
         app.add_middleware(MetricsMiddleware, meter=meter)
 
