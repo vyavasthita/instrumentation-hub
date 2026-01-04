@@ -6,7 +6,7 @@ from typing import Any, Optional
 
 from fastapi import FastAPI
 
-from .config import Config
+from .config import ConfigModel
 from .observability.otel_collector.logging.setup import OpenTelemetryLoggingSetup
 from .observability.otel_collector.metrics.middleware import MetricsMiddleware
 from .observability.otel_collector.metrics.setup import OpenTelemetryMetricsSetup
@@ -27,7 +27,6 @@ class InstrumentationResult:
     meter: Any
     logging_components: Any
     tracer_provider: Any
-
 
 
 class FastAPIInstrumentation:
@@ -53,23 +52,26 @@ class FastAPIInstrumentation:
 
     def __init__(
         self,
-        otlp_endpoint: Optional[str] = None,
         service_name: Optional[str] = None,
+        exporter_logs_endpoint: Optional[str] = None,
+        exporter_traces_endpoint: Optional[str] = None,
+        exporter_metrics_endpoint: Optional[str] = None,
+        metrics_mount_path: Optional[str] = None,
+        attach_python_logging: Optional[bool] = None,
         log_level: LogLevel | str = LogLevel.INFO,
-        **kwargs
     ):
         """
-        Accepts primitive configuration parameters for OpenTelemetry setup.
-        - otlp_endpoint: The OTLP collector endpoint URL.
-        - service_name: The logical service name for traces/metrics/logs.
-        - log_level: Logging level (LogLevel enum or string, default INFO).
-        - kwargs: Any additional config values supported by ConfigModel.
+        Accepts explicit configuration parameters for OpenTelemetry setup.
+        All fields correspond to ConfigModel fields, but use snake_case for Pythonic API.
         """
-        self.config = Config(
-            otlp_endpoint=otlp_endpoint,
-            service_name=service_name,
-            log_level=log_level.value,
-            **kwargs
+        self.config = ConfigModel(
+            OTEL_SERVICE_NAME=service_name,
+            OTEL_EXPORTER_LOGS_ENDPOINT=exporter_logs_endpoint,
+            OTEL_EXPORTER_TRACES_ENDPOINT=exporter_traces_endpoint,
+            OTEL_EXPORTER_METRICS_ENDPOINT=exporter_metrics_endpoint,
+            METRICS_MOUNT_PATH=metrics_mount_path,
+            ATTACH_PYTHON_LOGGING=attach_python_logging,
+            LOG_LEVEL=log_level,
         )
 
     def setup(self, app: FastAPI) -> InstrumentationResult:
