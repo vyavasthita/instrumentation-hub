@@ -42,6 +42,10 @@ class ConfigModel(BaseSettings):
         default=True,
         description="Attach the OTEL logging handler to Python's root logger when True.",
     )
+    LOG_LEVEL: str = Field(
+        default="INFO",
+        description="Log level for Python logging (e.g., 'INFO', 'DEBUG').",
+    )
 
     class Config:
         env_file = ".env"

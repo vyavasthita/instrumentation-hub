@@ -54,10 +54,10 @@ class OpenTelemetryLoggingSetup:
         self.components = LoggingComponents(provider=provider, processor=processor)
 
         if self.config.ATTACH_PYTHON_LOGGING:
-            handler = LoggingHandler(level=logging.INFO, logger_provider=provider)
+            handler = LoggingHandler(level=self.config.LOG_LEVEL, logger_provider=provider)
             root_logger = logging.getLogger()
             root_logger.addHandler(handler)
-            root_logger.setLevel(logging.INFO)
+            root_logger.setLevel(self.config.LOG_LEVEL)
             root_logger.propagate = True
 
         atexit.register(self.shutdown)

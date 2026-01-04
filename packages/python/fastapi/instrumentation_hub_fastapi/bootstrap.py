@@ -58,11 +58,12 @@ class FastAPIInstrumentation:
         exporter_metrics_endpoint: Optional[str] = None,
         metrics_mount_path: Optional[str] = None,
         attach_python_logging: Optional[bool] = None,
-        log_level: LogLevel | str = LogLevel.INFO,
+        log_level: Optional[str] = None,
     ):
         """
         Accepts explicit configuration parameters for OpenTelemetry setup.
         All fields correspond to ConfigModel fields, but use snake_case for Pythonic API.
+        log_level: Optional log level for Python logging (e.g., "INFO", "DEBUG").
         """
         self.config = ConfigModel(
             OTEL_SERVICE_NAME=service_name,
