@@ -47,27 +47,35 @@ out of the box.
 
 ## Usage
 
+
 ```python
+# Example: Instrumenting FastAPI with primitive parameters (no internal config dependency)
 from fastapi import FastAPI
-from instrumentation_hub_fastapi import Config, ConfigModel, setup_fastapi_instrumentation
+from instrumentation_hub_fastapi import setup_fastapi_instrumentation
 
 app = FastAPI()
 
-# Option 1: rely on environment variables and reuse the cached instance
-config = Config()
+# Optionally load settings from your own config or environment
+otel_traces_endpoint = "http://otel-collector:4318/v1/traces"
+otel_logs_endpoint = "http://otel-collector:4318/v1/logs"
+otel_metrics_endpoint = "http://otel-collector:4318/v1/metrics"
+service_name = "orders-api"
 
-# Option 2: override fields explicitly
-# config = ConfigModel(
-#     OTEL_SERVICE_NAME="orders-api",
-#     OTEL_EXPORTER_LOGS_ENDPOINT="http://otel-collector:4318/v1/logs",
-#     OTEL_EXPORTER_TRACES_ENDPOINT="http://otel-collector:4318/v1/traces",
-#     OTEL_EXPORTER_METRICS_ENDPOINT="http://otel-collector:4318/v1/metrics",
-# )
-
-setup_fastapi_instrumentation(app, config)
+# Attach OpenTelemetry logging, tracing, and metrics using primitive parameters
+setup_fastapi_instrumentation(
+    app,
+    otlp_endpoint=otel_traces_endpoint,  # OTLP endpoint for traces
+    service_name=service_name,
+    log_level="INFO",  # Optionally set log level
+    OTEL_EXPORTER_LOGS_ENDPOINT=otel_logs_endpoint,
+    OTEL_EXPORTER_METRICS_ENDPOINT=otel_metrics_endpoint,
+    METRICS_MOUNT_PATH="/metrics",
+    ATTACH_PYTHON_LOGGING=True,
+)
 
 @app.get("/health")
 def health():
+    """Health check endpoint for service monitoring."""
     return {"status": "ok"}
 ```
 
