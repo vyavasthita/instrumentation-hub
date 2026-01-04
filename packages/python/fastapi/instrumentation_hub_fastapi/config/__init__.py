@@ -17,7 +17,18 @@ class ConfigModel(BaseSettings):
         print(config.OTEL_SERVICE_NAME)
         ```
     """
-
+    LOGGING_BACKEND: str = Field(
+        default="loki",
+        description="Backend to use for logs (e.g., 'loki', 'none').",
+    )
+    TRACING_BACKEND: str = Field(
+        default="tempo",
+        description="Backend to use for traces (e.g., 'tempo', 'none').",
+    )
+    METRICS_BACKEND: str = Field(
+        default="prometheus",
+        description="Backend to use for metrics (e.g., 'prometheus', 'none').",
+    )
     OTEL_SERVICE_NAME: str = Field(
         default="instrumentation-hub-fastapi",
         description="Value assigned to the OpenTelemetry service.name resource attribute.",
@@ -53,8 +64,13 @@ class ConfigModel(BaseSettings):
 
     @cached_property
     def resource(self) -> Resource:
-        # Every signal shares the same OpenTelemetry resource metadata for consistent labeling.
-        return Resource.create({SERVICE_NAME: self.OTEL_SERVICE_NAME})
+        # Add per-signal backend resource attributes for routing processor.
+        return Resource.create({
+            SERVICE_NAME: self.OTEL_SERVICE_NAME,
+            "logging_backend": self.LOGGING_BACKEND,
+            "tracing_backend": self.TRACING_BACKEND,
+            "metrics_backend": self.METRICS_BACKEND,
+        })
 
 
 @lru_cache
