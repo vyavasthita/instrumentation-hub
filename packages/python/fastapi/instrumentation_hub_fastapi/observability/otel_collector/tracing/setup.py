@@ -22,7 +22,13 @@ class OpenTelemetryTracingSetup:
         self.app = app
 
     def setup_tracing(self) -> TracerProvider:
-        """Create the tracer provider, span processor, and exporter bindings."""
+        """Create the tracer provider, span processor, and exporter bindings.
+
+        The `Config().resource` injected here carries `tracing_backend` so the
+        OAAS collector can route spans to Tempo or Jaeger without any code
+        changes in the workload. Switching backends is therefore as easy as
+        exporting TRACING_BACKEND=jaeger in the service environment.
+        """
         endpoint = Config().OTEL_EXPORTER_TRACES_ENDPOINT
         exporter = OTLPSpanExporter(endpoint=endpoint)
         provider = TracerProvider(resource=Config().resource)
@@ -32,5 +38,10 @@ class OpenTelemetryTracingSetup:
         return provider
 
     def instrument_fastapi(self, tracer_provider: TracerProvider) -> None:
-        """Register FastAPI instrumentation once setup is complete."""
+        """Register FastAPI instrumentation once setup is complete.
+
+        This ensures Uvicorn/FastAPI middleware emits spans enriched with the
+        same resource attributes, so Grafana can correlate them with logs no
+        matter which tracing backend receives the data.
+        """
         FastAPIInstrumentor.instrument_app(self.app, tracer_provider=tracer_provider)

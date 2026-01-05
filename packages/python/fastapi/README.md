@@ -34,6 +34,9 @@ Supported fields:
 | Field | Description |
 |-------|-------------|
 | `OTEL_SERVICE_NAME` | Resource attribute stored on spans/logs/metrics. |
+| `LOGGING_BACKEND` | Hint for the OAAS collector routing processor (`loki` or `opensearch`). |
+| `TRACING_BACKEND` | Hint for trace routing (`tempo` by default, set `jaeger` to fan out to Jaeger). |
+| `METRICS_BACKEND` | Hint for metrics routing (`prometheus` today, extensible later). |
 | `OTEL_EXPORTER_LOGS_ENDPOINT` | OTLP HTTP endpoint for log exports (e.g. `http://otel-collector:4318/v1/logs`). |
 | `OTEL_EXPORTER_TRACES_ENDPOINT` | OTLP HTTP endpoint for spans. |
 | `OTEL_EXPORTER_METRICS_ENDPOINT` | OTLP HTTP endpoint for metrics. |
@@ -42,6 +45,9 @@ Supported fields:
 
 Default environment prefix is `OTEL_`, so variables such as `OTEL_EXPORTER_LOGS_ENDPOINT` and `OTEL_SERVICE_NAME` work
 out of the box.
+
+> Every service sets its own `{LOGGING,TRACING,METRICS}_BACKEND` values, so the OAAS collector can host mixed
+> combinations (e.g., Service A → Loki/Jaeger while Service B → OpenSearch/Tempo) without per-tenant config drift.
 
 ---
 
