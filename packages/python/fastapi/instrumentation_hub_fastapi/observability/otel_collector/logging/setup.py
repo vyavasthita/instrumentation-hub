@@ -37,7 +37,13 @@ class OpenTelemetryLoggingSetup:
         self.components: Optional[LoggingComponents] = None
 
     def _create_logging_components(self) -> LoggingComponents:
-        """Create and configure OTLP exporter, processor, and provider."""
+        """Create and configure OTLP exporter, processor, and provider.
+
+        The exporter talks directly to the OAAS collector. Because the provider
+        is created with `Config().resource`, every log record carries
+        `logging_backend`, which the collector's routing processor inspects
+        before deciding whether to push to Loki or OpenSearch.
+        """
         exporter_wrapper = OTLPLogExporterWrapper(endpoint=Config().OTEL_EXPORTER_LOGS_ENDPOINT)
         processor = OTLPLogProcessor(exporter_wrapper.get_exporter()).get_processor()
         provider = LoggerProvider(resource=Config().resource)
@@ -46,7 +52,13 @@ class OpenTelemetryLoggingSetup:
         return LoggingComponents(provider=provider, processor=processor)
 
     def _attach_python_logging(self, provider: LoggerProvider) -> None:
-        """Attach OpenTelemetry LoggingHandler to the root logger if configured."""
+        """Attach OpenTelemetry LoggingHandler to the root logger if configured.
+
+        Doing this once at bootstrap time means *every* module in the service,
+        including third-party dependencies, now emits enriched OTLP records.
+        This is how a simple `logging.info` call in application code ends up in
+        Grafana Explore alongside its trace/span IDs.
+        """
         handler = LoggingHandler(level=Config().LOG_LEVEL, logger_provider=provider)
 
         root_logger = logging.getLogger()

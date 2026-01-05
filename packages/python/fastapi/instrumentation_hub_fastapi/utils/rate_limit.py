@@ -1,4 +1,10 @@
-"""Reusable decorator for rate-limited logging."""
+"""Reusable decorator for rate-limited logging.
+
+The OAAS stack treats logs as a first-class signal, so it is easy for noisy
+endpoints (for example `/health`) to flood OpenSearch or Loki. Wrapping a route
+handler with `@rate_limited_log` preserves visibility while ensuring the export
+pipeline stays within reasonable volume limits.
+"""
 from __future__ import annotations
 
 import functools

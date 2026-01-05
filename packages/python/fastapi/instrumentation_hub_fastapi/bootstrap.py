@@ -1,5 +1,18 @@
 
-"""Entrypoints for wiring Instrumentation Hub into FastAPI."""
+"""Entrypoints for wiring Instrumentation Hub into FastAPI.
+
+This module is usually the first thing application code touches, so it documents
+the full observability story:
+
+* Logging – configure an OTLP logger provider whose resource attributes include
+    `logging_backend`, allowing the OAAS routing processor to pick the right
+    exporter (Loki or OpenSearch).
+* Tracing – install FastAPI instrumentation plus a tracer provider that emits
+    spans to the Collector so Tempo dashboards work out of the box.
+* Metrics – lazily create a shared `MeterProvider`, expose custom meters to the
+    app, and mount both OTLP and Prometheus exporters so Grafana can scrape or
+    receive pushes.
+"""
 from dataclasses import dataclass
 from typing import Any
 
@@ -28,45 +41,52 @@ class InstrumentationResult:
 
 
 class FastAPIInstrumentation:
-    """
-    High-level orchestration of logging, tracing, and metrics for FastAPI.
+    """Configure logging, tracing, and metrics in one call.
 
-    Now accepts primitive parameters for configuration, not a ConfigModel object.
+    The helper intentionally hides the low-level OpenTelemetry plumbing so that
+    each FastAPI project stays focused on business logic. It also guarantees
+    that every signal shares the same `Resource` metadata, which is what allows
+    OAAS' routing processor to recognize a service's chosen backends.
 
     Example:
         ```python
-        from fastapi import FastAPI
-        from instrumentation_hub_fastapi import FastAPIInstrumentation
-
         app = FastAPI()
-        instrumentation = FastAPIInstrumentation(
-            otlp_endpoint="http://localhost:4317",
-            service_name="my-fastapi-service",
-            log_level="INFO"
-        )
-        instrumentation.setup(app)
+        FastAPIInstrumentation().setup(app)
         ```
+
+    Under the hood this will wire the logging handler, register FastAPI
+    middlewares, spin up OTLP exporters, and mount the `/metrics` endpoint.
     """
     def setup(self, app: FastAPI) -> InstrumentationResult:
+        """Attach logging, tracing, metrics, and middleware to *app*.
+
+        Returns
+        -------
+        InstrumentationResult
+            Carries the three core providers so callers can register custom
+            instruments, emit spans manually, or flush logs during shutdown.
         """
-        Attach logging, tracing, metrics, and middleware to the provided FastAPI app.
-        Returns an InstrumentationResult with meter, logging, and tracing objects.
-        """
-        # Set up OpenTelemetry logging
+        # 1) Logging – attach the OTLP handler to Python's root logger so every
+        # module automatically emits structured records that include
+        # `logging_backend`. The OAAS collector uses that attribute to route
+        # logs to Loki or OpenSearch without any per-service config files.
         logging_components = OpenTelemetryLoggingSetup().setup_logging()
 
-        # Set up OpenTelemetry tracing
+        # 2) Tracing – instrument FastAPI before any routes run so request/route
+        # span names and attributes follow OTEL semantic conventions.
         tracing = OpenTelemetryTracingSetup(app)
         tracer_provider = tracing.setup_tracing()
         tracing.instrument_fastapi(tracer_provider=tracer_provider)
 
-        # Set up OpenTelemetry metrics
+        # 3) Metrics – expose both OTLP and Prometheus read paths so the
+        # collector and Grafana can consume the exact same metrics.
         metrics = OpenTelemetryMetricsSetup(app)
         meter_provider = metrics.setup()
         metrics.instrument_fastapi(meter_provider)
         meter = OpenTelemetryMetricsSetup.get_meter(meter_provider)
 
-        # Add metrics middleware to FastAPI app
+        # 4) Middleware – per-request measurements reuse the shared meter so
+        # histogram buckets line up with custom business metrics.
         app.add_middleware(MetricsMiddleware, meter=meter)
 
         return InstrumentationResult(

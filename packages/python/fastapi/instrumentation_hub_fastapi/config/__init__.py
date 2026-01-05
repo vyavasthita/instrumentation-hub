@@ -11,10 +11,17 @@ from pydantic_settings import BaseSettings
 class ConfigModel(BaseSettings):
     """Typed configuration mirroring tic-tac-toe's pattern (uppercase fields).
 
+    The same object is used inside the instrumentation-hub library and in the
+    workloads that depend on it, which means a single `.env` file controls the
+    signal destinations *and* the resource attributes that the OAAS collector
+    reads at runtime.
+
     Example:
         ```python
         config = ConfigModel(OTEL_SERVICE_NAME="orders-api")
-        print(config.OTEL_SERVICE_NAME)
+        # logging_backend becomes a Resource attribute, so OAAS' routing
+        # processor automatically ships the service's logs to OpenSearch.
+        print(config.resource.attributes["logging_backend"])
         ```
     """
     LOGGING_BACKEND: str = Field(
@@ -64,7 +71,8 @@ class ConfigModel(BaseSettings):
 
     @cached_property
     def resource(self) -> Resource:
-        # Add per-signal backend resource attributes for routing processor.
+        # Add per-signal backend resource attributes so the OAAS routing
+        # processor can read a service's intent without bespoke config files.
         return Resource.create({
             SERVICE_NAME: self.OTEL_SERVICE_NAME,
             "logging_backend": self.LOGGING_BACKEND,
