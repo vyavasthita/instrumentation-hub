@@ -11,13 +11,31 @@ from pydantic_settings import BaseSettings
 class ConfigModel(BaseSettings):
     """Typed configuration mirroring tic-tac-toe's pattern (uppercase fields).
 
+    The same object is used inside the instrumentation-hub library and in the
+    workloads that depend on it, which means a single `.env` file controls the
+    signal destinations *and* the resource attributes that the OAAS collector
+    reads at runtime.
+
     Example:
         ```python
         config = ConfigModel(OTEL_SERVICE_NAME="orders-api")
-        print(config.OTEL_SERVICE_NAME)
+        # logging_backend becomes a Resource attribute, so OAAS' routing
+        # processor automatically ships the service's logs to OpenSearch.
+        print(config.resource.attributes["logging_backend"])
         ```
     """
-
+    LOGGING_BACKEND: str = Field(
+        default="loki",
+        description="Backend to use for logs (e.g., 'loki', 'none').",
+    )
+    TRACING_BACKEND: str = Field(
+        default="tempo",
+        description="Backend to use for traces (e.g., 'tempo', 'none').",
+    )
+    METRICS_BACKEND: str = Field(
+        default="prometheus",
+        description="Backend to use for metrics (e.g., 'prometheus', 'none').",
+    )
     OTEL_SERVICE_NAME: str = Field(
         default="instrumentation-hub-fastapi",
         description="Value assigned to the OpenTelemetry service.name resource attribute.",
@@ -53,8 +71,14 @@ class ConfigModel(BaseSettings):
 
     @cached_property
     def resource(self) -> Resource:
-        # Every signal shares the same OpenTelemetry resource metadata for consistent labeling.
-        return Resource.create({SERVICE_NAME: self.OTEL_SERVICE_NAME})
+        # Add per-signal backend resource attributes so the OAAS routing
+        # processor can read a service's intent without bespoke config files.
+        return Resource.create({
+            SERVICE_NAME: self.OTEL_SERVICE_NAME,
+            "logging_backend": self.LOGGING_BACKEND,
+            "tracing_backend": self.TRACING_BACKEND,
+            "metrics_backend": self.METRICS_BACKEND,
+        })
 
 
 @lru_cache
