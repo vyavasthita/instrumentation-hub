@@ -1,6 +1,5 @@
 """Configuration objects for FastAPI OpenTelemetry instrumentation."""
 from __future__ import annotations
-
 from functools import cached_property, lru_cache
 
 from opentelemetry.sdk.resources import Resource, SERVICE_NAME

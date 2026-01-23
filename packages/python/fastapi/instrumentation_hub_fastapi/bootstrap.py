@@ -15,14 +15,14 @@ the full observability story:
 """
 from dataclasses import dataclass
 from typing import Any
-
 from fastapi import FastAPI
 
 from instrumentation_hub_fastapi.observability.otel_collector.logging.setup import OpenTelemetryLoggingSetup
 from instrumentation_hub_fastapi.observability.otel_collector.metrics.middleware import MetricsMiddleware
 from instrumentation_hub_fastapi.observability.otel_collector.metrics.setup import OpenTelemetryMetricsSetup
 from instrumentation_hub_fastapi.observability.otel_collector.tracing.setup import OpenTelemetryTracingSetup
-from instrumentation_hub_fastapi.enums.log_level import LogLevel
+from instrumentation_hub_fastapi.middlewares.api_instrumentation.config import InstrumentationConfigFactory, InstrumentationSanitizationConfig
+from instrumentation_hub_fastapi.middlewares.api_instrumentation.api_instrumentation_middleware import ApiInstrumentationMiddleware
 
 
 @dataclass
@@ -57,7 +57,14 @@ class FastAPIInstrumentation:
     Under the hood this will wire the logging handler, register FastAPI
     middlewares, spin up OTLP exporters, and mount the `/metrics` endpoint.
     """
-    def setup(self, app: FastAPI) -> InstrumentationResult:
+    def setup(
+        self,
+        app: FastAPI,
+        metrics_config: InstrumentationConfigFactory = None,
+        sanitization_config: InstrumentationSanitizationConfig = None,
+        service_name: str = "instrumentation_hub",
+        log_level: str = "INFO"
+    ) -> InstrumentationResult:
         """Attach logging, tracing, metrics, and middleware to *app*.
 
         Returns
@@ -85,8 +92,9 @@ class FastAPIInstrumentation:
         metrics.instrument_fastapi(meter_provider)
         meter = OpenTelemetryMetricsSetup.get_meter(meter_provider)
 
-        # 4) Middleware – per-request measurements reuse the shared meter so
-        # histogram buckets line up with custom business metrics.
+
+        # 4) Middleware – add logging and metrics middleware for per-request instrumentation
+        app.add_middleware(ApiInstrumentationMiddleware, config=metrics_config, sanitization_config=sanitization_config, service_name=service_name, log_level=log_level)
         app.add_middleware(MetricsMiddleware, meter=meter)
 
         return InstrumentationResult(
