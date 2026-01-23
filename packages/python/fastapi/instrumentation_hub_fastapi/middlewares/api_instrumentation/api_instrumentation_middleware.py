@@ -94,7 +94,10 @@ class ApiInstrumentationMiddleware(BaseHTTPMiddleware):
             async for chunk in response.body_iterator:
                 response_body += chunk
 
-            response.body_iterator = iter([response_body])
+            async def single_chunk():
+                yield response_body
+                
+            response.body_iterator = single_chunk()
             response_content = response_body.decode()
 
             try:
