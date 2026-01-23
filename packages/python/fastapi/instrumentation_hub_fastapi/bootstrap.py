@@ -61,7 +61,9 @@ class FastAPIInstrumentation:
         self,
         app: FastAPI,
         metrics_config: InstrumentationConfigFactory = None,
-        sanitization_config: InstrumentationSanitizationConfig = None
+        sanitization_config: InstrumentationSanitizationConfig = None,
+        service_name: str = "instrumentation_hub",
+        log_level: str = "INFO"
     ) -> InstrumentationResult:
         """Attach logging, tracing, metrics, and middleware to *app*.
 
@@ -92,7 +94,7 @@ class FastAPIInstrumentation:
 
 
         # 4) Middleware – add logging and metrics middleware for per-request instrumentation
-        app.add_middleware(ApiInstrumentationMiddleware, config=metrics_config, sanitization_config=sanitization_config)
+        app.add_middleware(ApiInstrumentationMiddleware, config=metrics_config, sanitization_config=sanitization_config, service_name=service_name, log_level=log_level)
         app.add_middleware(MetricsMiddleware, meter=meter)
 
         return InstrumentationResult(

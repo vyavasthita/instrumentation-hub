@@ -13,7 +13,7 @@ class ApiInstrumentationMiddleware(BaseHTTPMiddleware):
     """
     Middleware for API observability: logs requests/responses, tracks metrics, and safely handles sensitive data.
     """
-    def __init__(self, app, config: 'InstrumentationConfigFactory' = None, sanitization_config: 'InstrumentationSanitizationConfig' = None):
+    def __init__(self, app, config: 'InstrumentationConfigFactory' = None, sanitization_config: 'InstrumentationSanitizationConfig' = None, service_name: str = "instrumentation_hub", log_level: str = "INFO"):
         super().__init__(app)
         meter = get_meter(__name__)
 
@@ -22,11 +22,12 @@ class ApiInstrumentationMiddleware(BaseHTTPMiddleware):
 
         self.metrics = self._create_metrics(meter, config)
 
-        self.logger = logging.getLogger("instrumentation_hub")
-        self.logger.setLevel(logging.INFO)
+        self.logger = logging.getLogger(service_name)
+        self.logger.setLevel(log_level.upper())
 
     def _create_metrics(self, meter, config):
         metrics = {}
+        
         if MetricType.REQUEST_COUNT in config.enabled_metrics:
             metrics['request_count'] = meter.create_counter(
                 "http_requests_total", description="Total HTTP requests"
