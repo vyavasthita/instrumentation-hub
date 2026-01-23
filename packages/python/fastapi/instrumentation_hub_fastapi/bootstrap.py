@@ -15,14 +15,14 @@ the full observability story:
 """
 from dataclasses import dataclass
 from typing import Any
-
 from fastapi import FastAPI
 
 from instrumentation_hub_fastapi.observability.otel_collector.logging.setup import OpenTelemetryLoggingSetup
 from instrumentation_hub_fastapi.observability.otel_collector.metrics.middleware import MetricsMiddleware
 from instrumentation_hub_fastapi.observability.otel_collector.metrics.setup import OpenTelemetryMetricsSetup
 from instrumentation_hub_fastapi.observability.otel_collector.tracing.setup import OpenTelemetryTracingSetup
-from instrumentation_hub_fastapi.middlewares.api_instrumentation_middleware import ApiInstrumentationMiddleware
+from instrumentation_hub_fastapi.middlewares.api_instrumentation.config import InstrumentationConfigFactory, InstrumentationSanitizationConfig
+from instrumentation_hub_fastapi.middlewares.api_instrumentation.api_instrumentation_middleware import ApiInstrumentationMiddleware
 
 
 @dataclass
@@ -57,7 +57,12 @@ class FastAPIInstrumentation:
     Under the hood this will wire the logging handler, register FastAPI
     middlewares, spin up OTLP exporters, and mount the `/metrics` endpoint.
     """
-    def setup(self, app: FastAPI) -> InstrumentationResult:
+    def setup(
+        self,
+        app: FastAPI,
+        metrics_config: InstrumentationConfigFactory = None,
+        sanitization_config: InstrumentationSanitizationConfig = None
+    ) -> InstrumentationResult:
         """Attach logging, tracing, metrics, and middleware to *app*.
 
         Returns
@@ -87,7 +92,7 @@ class FastAPIInstrumentation:
 
 
         # 4) Middleware – add logging and metrics middleware for per-request instrumentation
-        app.add_middleware(ApiInstrumentationMiddleware)
+        app.add_middleware(ApiInstrumentationMiddleware, config=metrics_config, sanitization_config=sanitization_config)
         app.add_middleware(MetricsMiddleware, meter=meter)
 
         return InstrumentationResult(
