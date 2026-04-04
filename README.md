@@ -1,95 +1,100 @@
 # Instrumentation Hub
 
-A polyglot toolkit for wiring OpenTelemetry-powered observability into any backend service.
-The goal is to centralize best practices for exporters, resource configuration, and framework-specific helpers
-so new projects can adopt logs, metrics, and traces with a single import regardless of language.
+- OpenTelemetry client library for instrumenting backend services. 
+- Configures OTLP exporters, middleware, and Prometheus endpoints so services can push telemetry to [OAAS](https://github.com/vyavasthita/oaas) with minimal code.
+
+**Example consumer:** [Auth Service](https://github.com/vyavasthita/auth-service)
 
 ---
 
-## Repository Layout
+## Architecture
 
+```mermaid
+flowchart LR
+    subgraph Your Service
+        App((FastAPI)) --> IH[instrumentation-hub]
+        IH --> Logs[OTLP Log Exporter]
+        IH --> Traces[OTLP Span Exporter]
+        IH --> Metrics[OTLP Metric Exporter + /metrics]
+    end
+    Logs --> Collector[OAAS OTel Collector]
+    Traces --> Collector
+    Metrics --> Collector
+    Collector --> Grafana[Grafana Stack]
 ```
-instrumentation-hub/
-├── README.md
-├── docs/                         # Deep dives, design decisions, and ADRs
-├── examples/                     # Runnable samples that show end-to-end wiring
-└── packages/
-    ├── python/
-    │   ├── fastapi/              # FastAPI-specific helpers (OTLP, Prometheus, etc.)
-    │   │   └── instrumentation_hub_fastapi/
-    │   └── django/               # Django-specific helpers (future work)
-    │       └── instrumentation_hub_django/
-    └── node/
-        └── express/              # Placeholder for Node.js adapters (future work)
-```
-
-Each adapter lives in its own package so it can be published independently (e.g., `instrumentation-hub-fastapi`,
-`instrumentation-hub-django`). Shared, framework-agnostic code will eventually sit in a core module that every adapter depends on.
-
-- [FastAPI adapter docs](packages/python/fastapi/README.md) – installation and usage for `instrumentation-hub-fastapi`.
 
 ---
 
-## Roadmap Snapshot
+## Packages
 
-1. **Python / FastAPI**: Port the existing instrumentation glue code (OTLP exporters, Prometheus endpoint, middleware utilities).
-2. **Python / Django**: Add request/response tracing middleware plus database metrics.
-3. **Language-Agnostic Core**: Provide config schemas, semantic conventions, and exporter factories.
-4. **Node.js / Express**: Ship a TypeScript helper that mirrors the Python feature set.
-5. **Examples**: Maintain parity sample apps that emit telemetry into OAAS.
-
-Open issues will track each milestone so additional contributors can grab a slice without touching every folder.
+| Package | Framework | Status |
+|---------|-----------|--------|
+| [instrumentation-hub-fastapi](packages/python/fastapi) | FastAPI | Active |
+| instrumentation-hub-django | Django | Planned |
 
 ---
 
-## Using This Toolkit in Other Services
+## Quick Start (FastAPI)
 
-You have a few installation options, depending on how formal you need versioning to be:
-
-1. **Internal Package Index (recommended long-term)**
-   - Publish each adapter to a private PyPI/Artifactory/Nexus feed under names like `instrumentation-hub-fastapi`.
-   - Other repos simply run `poetry add instrumentation-hub-fastapi` or `pip install instrumentation-hub-fastapi==0.1.0`.
-   - Gives you semantic versioning, changelogs, and easy rollbacks.
-
-2. **Direct Git Dependency (fastest to bootstrap)**
-   - Point Poetry or pip at the repo/tag: `poetry add git+https://github.com/vyavasthita/instrumentation-hub.git#subdirectory=packages/python/fastapi`.
-   - No registry setup, but installs are slower and you need to manage tags carefully.
-
-3. **Git Submodule / Monorepo Include**
-   - Add this repo as a submodule and import the package source directly.
-   - Keeps everything in sync but requires discipline when updating the submodule pointer.
-
-4. **Source Vendoring (last resort)**
-   - Copy the package folder into another service.
-   - Only consider this if environments forbid git or registry access; otherwise upgrades become painful.
-
-We'll start with option 2 (Git dependency) during development, then move to option 1 when the API stabilizes.
-
----
-
-## Next Steps
-
-- Add a `pyproject.toml` for the FastAPI adapter and migrate the instrumentation code from the tic-tac-toe backend.
-- Build a minimal FastAPI example inside `examples/` that emits telemetry to OAAS to act as a regression harness.
-- Document contribution guidelines (coding standards, testing strategy, release process).
-- Set up CI (lint, type-check, unit tests, publish-on-tag).
-
-Once the FastAPI adapter is stable, the Django and Express packages can mirror the same pattern.
-
----
-
-## FastAPI Quick Start
+### Install
 
 ```bash
 poetry add git+https://github.com/vyavasthita/instrumentation-hub.git#subdirectory=packages/python/fastapi
 ```
 
+### Wire
+
 ```python
-from fastapi import FastAPI
-from instrumentation_hub_fastapi import setup_fastapi_instrumentation
+from instrumentation_hub_fastapi import FastAPIInstrumentation
 
 app = FastAPI()
-setup_fastapi_instrumentation(app)
+FastAPIInstrumentation().setup(app)
 ```
 
-Set the standard `OTEL_EXPORTER_*` env vars in your compose/service definition and the helper will emit logs, metrics, and traces directly to OAAS.
+### Set env vars
+
+```yaml
+OTEL_EXPORTER_LOGS_ENDPOINT: http://otel-collector:4318/v1/logs
+OTEL_EXPORTER_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
+OTEL_EXPORTER_METRICS_ENDPOINT: http://otel-collector:4318/v1/metrics
+OTEL_SERVICE_NAME: my-service
+LOGGING_BACKEND: loki          # or opensearch
+TRACING_BACKEND: tempo         # or jaeger
+METRICS_BACKEND: prometheus
+```
+
+That single `.setup()` call configures: OTLP log/trace/metric exporters, FastAPI auto-instrumentation, request/response logging middleware with sensitive field masking, HTTP metrics (counters + histograms), and a Prometheus `/metrics` endpoint.
+
+---
+
+## Configuration
+
+These env vars are set in the **consumer service's** `docker-compose.yaml` (not in this library). Endpoint values must point to the [OAAS](https://github.com/vyavasthita/oaas) OTel Collector on the shared Docker network. See [Auth Service](https://github.com/vyavasthita/auth-service) for a working example.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OTEL_SERVICE_NAME` | `instrumentation-hub-fastapi` | Service identity in telemetry |
+| `OTEL_EXPORTER_LOGS_ENDPOINT` | `http://otel-collector:4318/v1/logs` | OTLP HTTP logs endpoint (OAAS Collector) |
+| `OTEL_EXPORTER_TRACES_ENDPOINT` | `http://otel-collector:4318/v1/traces` | OTLP HTTP traces endpoint (OAAS Collector) |
+| `OTEL_EXPORTER_METRICS_ENDPOINT` | `http://otel-collector:4318/v1/metrics` | OTLP HTTP metrics endpoint (OAAS Collector) |
+| `LOGGING_BACKEND` | `loki` | Log routing hint for OAAS (`loki` / `opensearch`) |
+| `TRACING_BACKEND` | `tempo` | Trace routing hint (`tempo` / `jaeger`) |
+| `METRICS_BACKEND` | `prometheus` | Metrics routing hint |
+| `METRICS_MOUNT_PATH` | `/metrics` | Prometheus exposition path |
+| `ATTACH_PYTHON_LOGGING` | `true` | Attach OTEL handler to Python root logger |
+| `LOG_LEVEL` | `INFO` | Python log level |
+
+---
+
+## Related Repositories
+
+| Repository | Purpose |
+|------------|---------|
+| [OAAS](https://github.com/vyavasthita/oaas) | Observability stack this library pushes telemetry to |
+| [Auth Service](https://github.com/vyavasthita/auth-service) | Working example of a service using this library |
+
+---
+
+## License
+
+Copyright © 2026 Dilip Kumar Sharma. All rights reserved.
