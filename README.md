@@ -1,27 +1,32 @@
 # Instrumentation Hub
 
-- OpenTelemetry client library for instrumenting backend services. 
-- Configures OTLP exporters, middleware, and Prometheus endpoints so services can push telemetry to [OAAS](https://github.com/vyavasthita/oaas) with minimal code.
+An **OpenTelemetry Client Library**
+- Add full observability (logs, traces, metrics) to any FastAPI service with a single function call.
 
-**Example consumer:** [Auth Service](https://github.com/vyavasthita/auth-service)
+### Why Instrumentation Hub?
 
----
-
-## Architecture
+- **One line to instrument.** Call `FastAPIInstrumentation().setup(app)` and your service gets structured logging, distributed tracing, HTTP metrics, and a Prometheus `/metrics` endpoint — all wired to [OAAS](https://github.com/vyavasthita/oaas).
+- **Your service stays clean.** No OpenTelemetry boilerplate, no exporter setup, no log handler wiring. Observability is fully abstracted behind the library.
+- **Sensitive data masking built in.** Request/response logging middleware automatically masks passwords, tokens, and configurable fields — safe for production from day one.
+- **Backend routing via env vars.** Each service declares `LOGGING_BACKEND=loki`, `TRACING_BACKEND=tempo`, etc. The OAAS Collector routes accordingly — no code changes to switch backends.
+- **Decoupled from infrastructure.** The library knows nothing about Grafana, Loki, or Prometheus. It pushes standard OTLP to whatever collector is on the Docker network.
 
 ```mermaid
 flowchart LR
     subgraph Your Service
-        App((FastAPI)) --> IH[instrumentation-hub]
-        IH --> Logs[OTLP Log Exporter]
-        IH --> Traces[OTLP Span Exporter]
-        IH --> Metrics[OTLP Metric Exporter + /metrics]
+        App((FastAPI)) -- one function call --> IH[Instrumentation Hub]
+        IH --> Logs[OTLP Logs]
+        IH --> Traces[OTLP Traces]
+        IH --> Metrics[OTLP Metrics + /metrics]
+        IH --> MW[Request/Response Middleware]
     end
     Logs --> Collector[OAAS OTel Collector]
     Traces --> Collector
     Metrics --> Collector
     Collector --> Grafana[Grafana Stack]
 ```
+
+**Example consumer:** [Auth Service](https://github.com/vyavasthita/auth-service)
 
 ---
 
@@ -34,42 +39,11 @@ flowchart LR
 
 ---
 
-## Quick Start (FastAPI)
-
-### Install
-
-```bash
-poetry add git+https://github.com/vyavasthita/instrumentation-hub.git#subdirectory=packages/python/fastapi
-```
-
-### Wire
-
-```python
-from instrumentation_hub_fastapi import FastAPIInstrumentation
-
-app = FastAPI()
-FastAPIInstrumentation().setup(app)
-```
-
-### Set env vars
-
-```yaml
-OTEL_EXPORTER_LOGS_ENDPOINT: http://otel-collector:4318/v1/logs
-OTEL_EXPORTER_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
-OTEL_EXPORTER_METRICS_ENDPOINT: http://otel-collector:4318/v1/metrics
-OTEL_SERVICE_NAME: my-service
-LOGGING_BACKEND: loki          # or opensearch
-TRACING_BACKEND: tempo         # or jaeger
-METRICS_BACKEND: prometheus
-```
-
-That single `.setup()` call configures: OTLP log/trace/metric exporters, FastAPI auto-instrumentation, request/response logging middleware with sensitive field masking, HTTP metrics (counters + histograms), and a Prometheus `/metrics` endpoint.
-
----
-
 ## Configuration
 
-These env vars are set in the **consumer service's** `docker-compose.yaml` (not in this library). Endpoint values must point to the [OAAS](https://github.com/vyavasthita/oaas) OTel Collector on the shared Docker network. See [Auth Service](https://github.com/vyavasthita/auth-service) for a working example.
+- These env vars are set in the **consumer service's** `docker-compose.yaml` (not in this library).
+- Endpoint values must point to the [OAAS](https://github.com/vyavasthita/oaas) OTel Collector on the shared Docker network.
+- See [Auth Service](https://github.com/vyavasthita/auth-service) for a working example.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -86,12 +60,32 @@ These env vars are set in the **consumer service's** `docker-compose.yaml` (not 
 
 ---
 
+## Quick Start (FastAPI)
+
+### 1. Install
+
+```bash
+poetry add git+https://github.com/vyavasthita/instrumentation-hub.git#subdirectory=packages/python/fastapi
+```
+
+### 2. Wire
+
+```python
+from instrumentation_hub_fastapi import FastAPIInstrumentation
+
+app = FastAPI()
+FastAPIInstrumentation().setup(app)
+```
+
+That single `.setup()` call configures: OTLP log/trace/metric exporters, FastAPI auto-instrumentation, request/response logging middleware with sensitive field masking, HTTP metrics (counters + histograms), and a Prometheus `/metrics` endpoint.
+
 ## Related Repositories
 
 | Repository | Purpose |
 |------------|---------|
 | [OAAS](https://github.com/vyavasthita/oaas) | Observability stack this library pushes telemetry to |
-| [Auth Service](https://github.com/vyavasthita/auth-service) | Working example of a service using this library |
+| [Auth Service](https://github.com/vyavasthita/auth-service) | Working example — JWT auth service using this library |
+| [Micro-mart](https://github.com/vyavasthita/micro-mart) | Working example — e-commerce microservices using this library |
 
 ---
 
