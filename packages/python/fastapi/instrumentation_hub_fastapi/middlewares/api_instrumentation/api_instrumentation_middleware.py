@@ -59,10 +59,15 @@ class ApiInstrumentationMiddleware(BaseHTTPMiddleware):
             return str(data)[:self.sanitization_config.max_field_length]
 
     async def _extract_request_info(self, request: Request):
+        filtered_headers = {
+            key: value for key, value in request.headers.items()
+            if key.lower() not in self.sanitization_config.excluded_headers
+        }
+
         info = {
             "method": request.method,
             "url": str(request.url),
-            "headers": self.safe_truncate(dict(request.headers)),
+            "headers": self.safe_truncate(filtered_headers),
             "query_params": self.safe_truncate(dict(request.query_params)),
         }
 
@@ -108,15 +113,42 @@ class ApiInstrumentationMiddleware(BaseHTTPMiddleware):
             response_json = "<unparsable>"
         return response_json
 
+    @staticmethod
+    def _format_value(data):
+        """Format a value for log output without JSON encoding."""
+        if isinstance(data, dict):
+            pairs = ", ".join(f"{key}={value}" for key, value in data.items())
+            return "{" + pairs + "}"
+        
+        if isinstance(data, list):
+            return str(data)
+        
+        return str(data)
+
     def _log_request_response(self, request_info, response_json, status_code, process_time):
-        log_data = {
-            "event": "request",
-            "request": request_info,
-            "response": self.safe_truncate(response_json),
-            "status_code": status_code,
-            "latency": process_time
-        }
-        self.logger.info(json.dumps(log_data))
+        method = request_info.get("method", "")
+        url = request_info.get("url", "")
+        latency = round(process_time, 4)
+
+        parts = [f"{method} {url} {status_code} {latency}s"]
+
+        headers = request_info.get("headers")
+        if headers:
+            parts.append(f"headers: {self._format_value(headers)}")
+
+        query_params = request_info.get("query_params")
+        if query_params:
+            parts.append(f"params: {self._format_value(query_params)}")
+
+        body = request_info.get("body")
+        if body:
+            parts.append(f"body: {self._format_value(body)}")
+
+        response = self.safe_truncate(response_json)
+        if response:
+            parts.append(f"response: {self._format_value(response)}")
+
+        self.logger.info(" | ".join(parts))
 
     async def _get_response(self, request: Request, call_next, request_info):
         response = None
@@ -129,11 +161,9 @@ class ApiInstrumentationMiddleware(BaseHTTPMiddleware):
             status_code = 500
             if 'error_count' in self.metrics:
                 self.metrics['error_count'].add(1, {"endpoint": request.url.path, "http_status": status_code})
-            self.logger.error(json.dumps({
-                "event": "error",
-                "request": request_info,
-                "error": str(exc)
-            }))
+            self.logger.error(
+                f"ERROR {request_info.get('method', '')} {request_info.get('url', '')} 500 | error: {exc}"
+            )
             return JSONResponse(status_code=500, content={"detail": "Internal Server Error"}), status_code
         
         return response, status_code

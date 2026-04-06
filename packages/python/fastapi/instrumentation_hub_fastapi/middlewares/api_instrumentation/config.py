@@ -24,13 +24,34 @@ class InstrumentationConfigFactory:
 
 # Config for sanitization (sensitive fields and max field length)
 class InstrumentationSanitizationConfig:
-    DEFAULT_SENSITIVE_FIELDS: Set[str] = {'password', 'token', 'secret', 'authorization'}
+    DEFAULT_SENSITIVE_FIELDS: Set[str] = {'password', 'token', 'secret', 'authorization', 'cookie'}
 
-    def __init__(self, sensitive_fields: Set[str] = None, max_field_length: int = 128):
+    DEFAULT_EXCLUDED_HEADERS: Set[str] = {
+        'accept',
+        'accept-encoding',
+        'accept-language',
+        'connection',
+        'content-length',
+        'cookie',
+        'origin',
+        'referer',
+        'sec-ch-ua',
+        'sec-ch-ua-mobile',
+        'sec-ch-ua-platform',
+        'sec-fetch-dest',
+        'sec-fetch-mode',
+        'sec-fetch-site',
+        'sec-gpc',
+        'user-agent',
+    }
+
+    def __init__(self, sensitive_fields: Set[str] = None, max_field_length: int = 128, excluded_headers: Set[str] = None):
         """
         Args:
             sensitive_fields: set of field names to mask (case-insensitive). Defaults to common sensitive fields.
             max_field_length: int, max length for any field value
+            excluded_headers: set of header names (lowercase) to exclude from logs. Defaults to noisy browser headers.
         """
         self.sensitive_fields: Set[str] = sensitive_fields or self.DEFAULT_SENSITIVE_FIELDS
         self.max_field_length: int = max_field_length
+        self.excluded_headers: Set[str] = excluded_headers if excluded_headers is not None else self.DEFAULT_EXCLUDED_HEADERS
