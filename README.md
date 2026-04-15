@@ -1,5 +1,12 @@
 # Instrumentation Hub
 
+<p align="left">
+  <img src="https://img.shields.io/badge/python-3.13-blue" alt="Python 3.13" />
+  <img src="https://img.shields.io/badge/framework-FastAPI-009688" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/telemetry-OpenTelemetry-blueviolet" alt="OpenTelemetry" />
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License" />
+</p>
+
 An **OpenTelemetry Client Library**
 - Add full observability (logs, traces, metrics) to any FastAPI service with a single function call.
 
@@ -27,6 +34,16 @@ flowchart LR
 ```
 
 **Example consumer:** [Auth Service](https://github.com/vyavasthita/auth-service)
+
+---
+
+## Skills Demonstrated
+
+- **One-call instrumentation** — a single `.setup(app)` call configures OTLP exporters for logs, traces, and metrics plus auto-instrumentation middleware, eliminating hundreds of lines of boilerplate.
+- **Sensitive data masking** — request/response logging middleware automatically redacts passwords, tokens, and configurable fields before export, production-safe from day one.
+- **Environment-driven backend routing** — each service declares `LOGGING_BACKEND`, `TRACING_BACKEND`, `METRICS_BACKEND` as env vars; the library tags telemetry so the OAAS Collector routes signals to the correct backend.
+- **Framework-agnostic core** — the FastAPI package wraps a framework-agnostic engine; adding Django support requires only a new adapter, not a rewrite.
+- **Zero coupling to infrastructure** — the library pushes standard OTLP; it knows nothing about Grafana, Loki, or Prometheus, keeping consumer services vendor-neutral.
 
 ---
 
@@ -85,10 +102,10 @@ That single `.setup()` call configures: OTLP log/trace/metric exporters, FastAPI
 |------------|---------|
 | [OAAS](https://github.com/vyavasthita/oaas) | Observability stack this library pushes telemetry to |
 | [Auth Service](https://github.com/vyavasthita/auth-service) | Working example — JWT auth service using this library |
-| [Micro-mart](https://github.com/vyavasthita/micro-mart) | Working example — e-commerce microservices using this library |
+| [Micro-Cart](https://github.com/vyavasthita/micro-cart) | Working example — e-commerce microservices using this library |
 
 ---
 
 ## License
 
-Copyright © 2026 Dilip Kumar Sharma. All rights reserved.
+[MIT](LICENSE) — Copyright © 2026 Dilip Kumar Sharma.
